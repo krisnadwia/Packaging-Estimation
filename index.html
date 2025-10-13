@@ -125,15 +125,27 @@
       return holidaysID.includes(key);
     }
     function addWorkingDays(date, days, includeStart = true) {
-      const result = new Date(date);
-      let added = 0;
-      if (includeStart && !isWeekend(result) && !isHoliday(result)) added++;
-      while (added < days) {
+      let result = new Date(date);
+    
+      // kalau start bukan hari kerja, langsung lompat ke hari kerja terdekat
+      result = normalizeToWorkingDay(result);
+    
+      let addedDays = 0;
+      while (addedDays < days) {
         result.setDate(result.getDate() + 1);
-        if (!isWeekend(result) && !isHoliday(result)) added++;
+    
+        // kalau bukan weekend atau tanggal merah baru dihitung
+        if (isWorkingDay(result)) {
+          addedDays++;
+        }
       }
+    
+      // terakhir, pastikan hasil juga bukan tanggal merah
+      result = normalizeToWorkingDay(result);
+    
       return result;
     }
+
     function normalizeToWorkingDay(date) {
       const result = new Date(date);
       while (isWeekend(result) || isHoliday(result)) result.setDate(result.getDate() + 1);
