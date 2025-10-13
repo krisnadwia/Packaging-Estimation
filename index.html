@@ -190,9 +190,15 @@
 
     // --- add working days (skip Sat, Sun, holidays) ---
     // startDate: Date object (will be copied), days: integer number of working days to add
-    function addWorkingDays(startDate, days) {
+    function addWorkingDays(startDate, days, includeStart = false) {
       let date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
       let added = 0;
+    
+      // jika hari mulai dihitung dan dia hari kerja
+      if (includeStart && !isWeekend(date) && !isHoliday(date)) {
+        added++;
+      }
+    
       while (added < days) {
         date.setDate(date.getDate() + 1);
         if (!isWeekend(date) && !isHoliday(date)) {
@@ -201,7 +207,7 @@
       }
       return date;
     }
-
+    
     // --- find next working day (if start day itself is not working, find next) ---
     function normalizeToWorkingDay(date) {
       let d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -299,12 +305,11 @@
         // Our addWorkingDays function adds X working days AFTER the start date. For days=1 we want the same day as completion if start is working (i.e., 0 add).
         let estDate;
         if (blk.days === 1) {
-          // completion is same working day (start)
+          // kalau cuma 1 hari kerja → hasil = start
           estDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
         } else {
-          // For N>1: we need to add (days - 1) working days after start to get completion day.
-          // Example: start Monday, 3 working days -> Mon (start), Tue (+1), Wed (+2) => completion Wed -> add (days -1) working days
-          estDate = addWorkingDays(start, blk.days - 1);
+          // hitung termasuk start hari kerja pertama
+          estDate = addWorkingDays(start, blk.days, true);
         }
 
         // If estDate falls on non-working day (shouldn't happen due to normalize + addWorkingDays) ensure normalize
