@@ -306,8 +306,9 @@
         let estDate;
         if (blk.startOffsetDays > 0) {
           // AFTER 12 PM atau Pre-Order → mulai dari hari kerja berikutnya
-          // lalu tambahkan (days - 1) hari kerja
-          estDate = addWorkingDays(start, blk.days - 1, true);
+          // lalu tambahkan (days - 1) hari kerja lagi
+          let nextStart = normalizeToWorkingDay(start);
+          estDate = addWorkingDays(nextStart, blk.days - 1, false);
         } else {
           // BEFORE 12 PM → start bisa dihitung sebagai hari kerja pertama
           if (blk.days === 1) {
@@ -316,7 +317,7 @@
             estDate = addWorkingDays(start, blk.days, true);
           }
         }
-
+        
         // If estDate falls on non-working day (shouldn't happen due to normalize + addWorkingDays) ensure normalize
         if (isWeekend(estDate) || isHoliday(estDate)) {
           estDate = normalizeToWorkingDay(estDate);
