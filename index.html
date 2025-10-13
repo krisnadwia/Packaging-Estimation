@@ -282,11 +282,10 @@
         // determine start day
         let start = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate());
         if (blk.startOffsetDays && blk.startOffsetDays > 0) {
-          // e.g., "After 12 PM" -> start next calendar day then normalize to working
-          start.setDate(start.getDate() + blk.startOffsetDays);
-          start = normalizeToWorkingDay(start);
+          do {
+            start.setDate(start.getDate() + 1);
+          } while (isWeekend(start) || isHoliday(start));
         } else {
-          // startOffset 0: start on same day IF it's working day, else next working day
           start = normalizeToWorkingDay(start);
         }
 
