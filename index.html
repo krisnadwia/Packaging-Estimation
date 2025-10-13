@@ -110,161 +110,175 @@
   </div>
 
   <script>
-    const holidaysID = [
-      '2025-01-01','2025-01-27','2025-01-28','2025-01-29','2025-03-28','2025-03-29','2025-03-31','2025-04-01',
-      '2025-04-18','2025-04-20','2025-05-01','2025-05-12','2025-05-29','2025-06-01','2025-06-06','2025-06-27',
-      '2025-08-17','2025-09-05','2025-12-25'
-    ];
+  const holidaysID = [
+    '2025-01-01','2025-01-27','2025-01-28','2025-01-29','2025-03-28','2025-03-29','2025-03-31','2025-04-01',
+    '2025-04-18','2025-04-20','2025-05-01','2025-05-12','2025-05-29','2025-06-01','2025-06-06','2025-06-27',
+    '2025-08-17','2025-09-05','2025-12-25'
+  ];
 
-    function isWeekend(date) {
-      const d = date.getDay();
-      return d === 0 || d === 6;
+  // 🎯 Cek apakah weekend
+  function isWeekend(date) {
+    const d = date.getDay();
+    return d === 0 || d === 6;
+  }
+
+  // 🎯 Cek apakah tanggal merah
+  function isHoliday(date) {
+    const key = date.toISOString().split('T')[0];
+    return holidaysID.includes(key);
+  }
+
+  // ✅ Gabungan weekend + tanggal merah
+  function isWorkingDay(date) {
+    return !isWeekend(date) && !isHoliday(date);
+  }
+
+  // ✅ Pastikan tanggal jatuh ke hari kerja berikutnya
+  function normalizeToWorkingDay(date) {
+    let result = new Date(date);
+    while (!isWorkingDay(result)) {
+      result.setDate(result.getDate() + 1);
     }
-    function isHoliday(date) {
-      const key = date.toISOString().split('T')[0];
-      return holidaysID.includes(key);
-    }
-    function addWorkingDays(date, days, includeStart = true) {
-      let result = new Date(date);
-    
-      // kalau start bukan hari kerja, langsung lompat ke hari kerja terdekat
-      result = normalizeToWorkingDay(result);
-    
-      let addedDays = 0;
-      while (addedDays < days) {
-        result.setDate(result.getDate() + 1);
-    
-        // kalau bukan weekend atau tanggal merah baru dihitung
-        if (isWorkingDay(result)) {
-          addedDays++;
-        }
+    return result;
+  }
+
+  // ✅ Tambah hari kerja dengan filter libur
+  function addWorkingDays(date, days, includeStart = true) {
+    let result = new Date(date);
+    result = normalizeToWorkingDay(result);
+
+    let addedDays = 0;
+    while (addedDays < days) {
+      result.setDate(result.getDate() + 1);
+      if (isWorkingDay(result)) {
+        addedDays++;
       }
-    
-      // terakhir, pastikan hasil juga bukan tanggal merah
-      result = normalizeToWorkingDay(result);
-    
-      return result;
     }
 
-    function normalizeToWorkingDay(date) {
-      const result = new Date(date);
-      while (isWeekend(result) || isHoliday(result)) result.setDate(result.getDate() + 1);
-      return result;
+    // pastikan hasil akhir juga bukan tanggal merah/weekend
+    result = normalizeToWorkingDay(result);
+
+    return result;
+  }
+
+  function countWorkingDaysBetween(start, end) {
+    let s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    let e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    let count = 0;
+    while (s < e) {
+      s.setDate(s.getDate() + 1);
+      if (isWorkingDay(s)) count++;
     }
-    function countWorkingDaysBetween(start, end) {
-      let s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      let e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-      let count = 0;
-      while (s < e) {
-        s.setDate(s.getDate() + 1);
-        if (!isWeekend(s) && !isHoliday(s)) count++;
+    return count;
+  }
+
+  function formatDateLong(date) {
+    return date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  const blocks = [
+    { label: '1 Working Day (Before 12 PM - Normal)', days: 1, startOffsetDays: 0 },
+    { label: '1 Working Day (After 12 PM - Normal)', days: 1, startOffsetDays: 1 },
+    { label: '3 Working Days Pre-Order', days: 3, startOffsetDays: 1 },
+    { label: '4 Working Days Pre-Order', days: 4, startOffsetDays: 1 },
+    { label: '5 Working Days Pre-Order', days: 5, startOffsetDays: 1 },
+    { label: '6 Working Days Pre-Order', days: 6, startOffsetDays: 1 },
+    { label: '7 Working Days Pre-Order', days: 7, startOffsetDays: 1 },
+    { label: '8 Working Days Pre-Order', days: 8, startOffsetDays: 1 },
+    { label: '9 Working Days Pre-Order', days: 9, startOffsetDays: 1 },
+    { label: '10 Working Days Pre-Order', days: 10, startOffsetDays: 1 },
+    { label: '30 Working Days Pre-Order', days: 30, startOffsetDays: 1 }
+  ];
+
+  function macroText(snPlaceholder, workingDays, estDate) {
+    const estText = `${formatDateLong(estDate)} at 23.59`;
+    return `For now, your order with SN (${snPlaceholder}) is will be packed. It takes ${workingDays} working days. Not include Saturday, Sunday and Public Holiday if any. Maximum your package will ship on ${estText}. But don't worry, it can be faster than the estimation.`;
+  }
+
+  function calculate() {
+    const input = document.getElementById('orderDate').value;
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
+    if (!input) {
+      resultsDiv.textContent = 'Please select the order / checkout date.';
+      return;
+    }
+
+    const [year, month, day] = input.split('-').map(Number);
+    const inputDate = new Date(year, month - 1, day);
+    const today = new Date();
+    const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    let output = '';
+    for (const blk of blocks) {
+      let estDate;
+      let start = new Date(inputDate);
+
+      if (blk.startOffsetDays > 0) {
+        // After 12 PM dan Pre-Order mulai hitung dari hari kerja berikutnya
+        start.setDate(start.getDate() + 1);
+        start = normalizeToWorkingDay(start);
+        estDate = addWorkingDays(start, blk.days - 1, false);
+      } else {
+        // Before 12 PM mulai dari hari itu juga (kalau hari kerja)
+        start = normalizeToWorkingDay(start);
+        estDate = blk.days === 1
+          ? new Date(start)
+          : addWorkingDays(start, blk.days, true);
       }
-      return count;
-    }
-    function formatDateLong(date) {
-      return date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    }
 
-    const blocks = [
-      { label: '1 Working Day (Before 12 PM - Normal)', days: 1, startOffsetDays: 0 },
-      { label: '1 Working Day (After 12 PM - Normal)', days: 1, startOffsetDays: 1 },
-      { label: '3 Working Days Pre-Order', days: 3, startOffsetDays: 1 },
-      { label: '4 Working Days Pre-Order', days: 4, startOffsetDays: 1 },
-      { label: '5 Working Days Pre-Order', days: 5, startOffsetDays: 1 },
-      { label: '6 Working Days Pre-Order', days: 6, startOffsetDays: 1 },
-      { label: '7 Working Days Pre-Order', days: 7, startOffsetDays: 1 },
-      { label: '8 Working Days Pre-Order', days: 8, startOffsetDays: 1 },
-      { label: '9 Working Days Pre-Order', days: 9, startOffsetDays: 1 },
-      { label: '10 Working Days Pre-Order', days: 10, startOffsetDays: 1 },
-      { label: '30 Working Days Pre-Order', days: 30, startOffsetDays: 1 }
-    ];
+      if (!isWorkingDay(estDate)) estDate = normalizeToWorkingDay(estDate);
 
-    function macroText(snPlaceholder, workingDays, estDate) {
-      const estText = `${formatDateLong(estDate)} at 23.59`;
-      return `For now, your order with SN (${snPlaceholder}) is will be packed. It takes ${workingDays} working days. Not include Saturday, Sunday and Public Holiday if any. Maximum your package will ship on ${estText}. But don't worry, it can be faster than the estimation.`;
-    }
+      let remaining = countWorkingDaysBetween(todayNorm, estDate);
+      if (remaining < 0) remaining = 0;
 
-    function calculate() {
-      const input = document.getElementById('orderDate').value;
-      const resultsDiv = document.getElementById('results');
-      resultsDiv.innerHTML = '';
-      if (!input) {
-        resultsDiv.textContent = 'Please select the order / checkout date.';
-        return;
-      }
-
-      const [year, month, day] = input.split('-').map(Number);
-      const inputDate = new Date(year, month - 1, day);
-      const today = new Date();
-      const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-      let output = '';
-      for (const blk of blocks) {
-        let estDate;
-        let start = new Date(inputDate);
-
-        if (blk.startOffsetDays > 0) {
-          start.setDate(start.getDate() + 1);
-          start = normalizeToWorkingDay(start);
-          estDate = addWorkingDays(start, blk.days - 1, false);
-        } else {
-          start = normalizeToWorkingDay(start);
-          estDate = blk.days === 1
-            ? new Date(start)
-            : addWorkingDays(start, blk.days, true);
-        }
-
-        if (isWeekend(estDate) || isHoliday(estDate)) estDate = normalizeToWorkingDay(estDate);
-
-        let remaining = countWorkingDaysBetween(todayNorm, estDate);
-        if (remaining < 0) remaining = 0;
-
-        const macro = macroText('', blk.days, estDate);
-        output += `
-          <div class="country">
-            <h3>${blk.label}</h3>
-            <div class="result">
-              <div class="highlight">Estimated Packaging Complete:</div>
-              <strong>${formatDateLong(estDate)}</strong> at <strong>23:59</strong><br>
-              Remaining Working Days: <strong>${remaining}</strong>
-              <div class="macro-container">
-                <div class="macro-box" id="macro-${blk.label.replace(/\s+/g,'-')}">
-                  <div class="macro-header">
-                    <div class="macro-title">Packaging Macro</div>
-                    <button class="copy-btn" data-id="macro-${blk.label.replace(/\s+/g,'-')}"
-                      onclick="copyToClipboard('macro-${blk.label.replace(/\s+/g,'-')}')">Copy</button>
-                  </div>
-                  <div class="macro-text">${macro}</div>
+      const macro = macroText('', blk.days, estDate);
+      output += `
+        <div class="country">
+          <h3>${blk.label}</h3>
+          <div class="result">
+            <div class="highlight">Estimated Packaging Complete:</div>
+            <strong>${formatDateLong(estDate)}</strong> at <strong>23:59</strong><br>
+            Remaining Working Days: <strong>${remaining}</strong>
+            <div class="macro-container">
+              <div class="macro-box" id="macro-${blk.label.replace(/\s+/g,'-')}">
+                <div class="macro-header">
+                  <div class="macro-title">Packaging Macro</div>
+                  <button class="copy-btn" data-id="macro-${blk.label.replace(/\s+/g,'-')}"
+                    onclick="copyToClipboard('macro-${blk.label.replace(/\s+/g,'-')}')">Copy</button>
                 </div>
+                <div class="macro-text">${macro}</div>
               </div>
             </div>
-          </div>`;
-      }
-
-      resultsDiv.innerHTML = output;
+          </div>
+        </div>`;
     }
 
-    function copyToClipboard(boxId) {
-      const box = document.getElementById(boxId);
-      if (!box) return;
-      const text = box.querySelector('.macro-text')?.innerText || box.innerText;
-      navigator.clipboard.writeText(text).then(() => {
-        const btn = document.querySelector(`[data-id="${boxId}"]`);
-        if (btn) {
-          const prev = btn.innerText;
-          btn.innerText = "Copied!";
-          setTimeout(() => btn.innerText = prev, 1500);
-        }
-      });
-    }
+    resultsDiv.innerHTML = output;
+  }
 
-    (function prefillToday(){
-      const el = document.getElementById('orderDate');
-      if (el) {
-        const t = new Date();
-        el.value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  function copyToClipboard(boxId) {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+    const text = box.querySelector('.macro-text')?.innerText || box.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector(`[data-id="${boxId}"]`);
+      if (btn) {
+        const prev = btn.innerText;
+        btn.innerText = "Copied!";
+        setTimeout(() => btn.innerText = prev, 1500);
       }
-    })();
-  </script>
+    });
+  }
+
+  (function prefillToday(){
+    const el = document.getElementById('orderDate');
+    if (el) {
+      const t = new Date();
+      el.value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    }
+  })();
+</script>
+
 </body>
 </html>
