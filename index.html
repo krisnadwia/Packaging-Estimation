@@ -282,14 +282,19 @@
         // determine start day
         let start = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate());
         if (blk.startOffsetDays && blk.startOffsetDays > 0) {
-          // tambah offset, lalu pastikan hasilnya hari kerja
-          do {
+          // AFTER 12 PM → mulai dari hari kerja berikutnya (bukan sekadar +1 tanggal)
+          start.setDate(start.getDate() + blk.startOffsetDays);
+          // kalau hasilnya weekend/holiday, lompat terus sampai ketemu hari kerja
+          while (isWeekend(start) || isHoliday(start)) {
             start.setDate(start.getDate() + 1);
-          } while (isWeekend(start) || isHoliday(start));
+          }
         } else {
-          start = normalizeToWorkingDay(start);
+          // BEFORE 12 PM → kalau hari itu libur/weekend, lompat ke hari kerja berikutnya
+          while (isWeekend(start) || isHoliday(start)) {
+            start.setDate(start.getDate() + 1);
+          }
         }
-        
+
         // If days === 1, special handling: For "1 Working Day" -> if start is working, packaging completes same start day (since it takes 1 working day)
         // Our addWorkingDays function adds X working days AFTER the start date. For days=1 we want the same day as completion if start is working (i.e., 0 add).
         let estDate;
