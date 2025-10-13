@@ -304,12 +304,17 @@
         // If days === 1, special handling: For "1 Working Day" -> if start is working, packaging completes same start day (since it takes 1 working day)
         // Our addWorkingDays function adds X working days AFTER the start date. For days=1 we want the same day as completion if start is working (i.e., 0 add).
         let estDate;
-        if (blk.days === 1) {
-          // kalau cuma 1 hari kerja → hasil = start
-          estDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        if (blk.startOffsetDays > 0) {
+          // AFTER 12 PM atau Pre-Order → mulai dari hari kerja berikutnya
+          // lalu tambahkan (days - 1) hari kerja
+          estDate = addWorkingDays(start, blk.days - 1, true);
         } else {
-          // hitung termasuk start hari kerja pertama
-          estDate = addWorkingDays(start, blk.days, true);
+          // BEFORE 12 PM → start bisa dihitung sebagai hari kerja pertama
+          if (blk.days === 1) {
+            estDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+          } else {
+            estDate = addWorkingDays(start, blk.days, true);
+          }
         }
 
         // If estDate falls on non-working day (shouldn't happen due to normalize + addWorkingDays) ensure normalize
