@@ -194,7 +194,7 @@
         if (blk.startOffsetDays > 0) {
           start.setDate(start.getDate() + 1);
           start = normalizeToWorkingDay(start);
-          estDate = addWorkingDays(start, blk.days - 1, true);
+          estDate = addWorkingDays(start, blk.days - 1, false);
         } else {
           start = normalizeToWorkingDay(start);
           estDate = blk.days === 1
