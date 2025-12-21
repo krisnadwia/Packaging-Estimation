@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Packaging Estimation 2025 SID (Indonesia 🇮🇩)</title>
   <style>
-    /* --- visual style mirip contoh --- */
+    /* --- visual style --- */
     body {
       background-color: #121212;
       color: #eee;
@@ -153,38 +153,26 @@
   </div>
 
   <script>
-    // --- daftar tanggal merah/public holiday Indonesia (dari user) ---
     const holidaysID = [
-      '2025-01-01', '2025-01-27', '2025-01-29', '2025-03-29', 
-      '2025-03-31', '2025-04-01', '2025-04-18', '2025-04-20',
-      '2025-05-01', '2025-05-12', '2025-05-29', '2025-06-01',
-      '2025-06-06', '2025-06-27', '2025-08-17', '2025-09-05',
-      '2025-12-25', '2025-01-28', '2025-03-28'
+      '2025-12-25', '2026-01-01', '2026-01-16', '2026-02-17', '2026-03-19', '2026-03-20', '2026-03-21', '2026-04-03', '2026-05-01', '2026-05-14', '2026-05-27', '2026-05-31', '2026-06-01', '2026-06-17', '2026-08-17', '2026-08-25', '2026-12-25'
     ];
 
-    // --- helper: weekend check (Sunday=0, Saturday=6) ---
     function isWeekend(date) {
       const d = date.getDay();
       return d === 0 || d === 6;
     }
 
-    // --- FIX 1: Ubah fungsi isHoliday agar tidak sensitif timezone ---
-    // Fungsi lama menggunakan toISOString() yang mengubah tanggal ke UTC, menyebabkan kesalahan di zona waktu Indonesia.
-    // Fungsi baru ini membuat string YYYY-MM-DD dari komponen tanggal lokal.
     function isHoliday(date) {
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+      const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const key = `${year}-${month}-${day}`;
       return holidaysID.includes(key);
     }
 
-    // --- add working days (skip Sat, Sun, holidays) ---
     function addWorkingDays(startDate, days) {
       let date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      if (days <= 0) { // Jika hanya perlu 0 hari kerja tambahan, langsung kembalikan tanggal awal
-        return date;
-      }
+      if (days <= 0) return date;
       let added = 0;
       while (added < days) {
         date.setDate(date.getDate() + 1);
@@ -195,7 +183,6 @@
       return date;
     }
 
-    // --- find next working day ---
     function normalizeToWorkingDay(date) {
       let d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       while (isWeekend(d) || isHoliday(d)) {
@@ -204,7 +191,6 @@
       return d;
     }
 
-    // --- count working days between two dates ---
     function countWorkingDaysBetween(start, end) {
       let s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       let e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
@@ -216,33 +202,30 @@
       return count;
     }
 
-    // --- Format date to long human readable ---
     function formatDateLong(date) {
       return date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     }
 
-    // --- durations and labels ---
+    // --- GENERATE BLOCKS DYNAMICALLY ---
     const blocks = [
         { label: '1 Working Day (Before 12 PM - Normal)', days: 1, startOffsetDays: 0 },
-        { label: '1 Working Day (After 12 PM - Normal)', days: 1, startOffsetDays: 1 },
-        { label: '3 Working Days Pre-Order', days: 3, startOffsetDays: 1 },
-        { label: '4 Working Days Pre-Order', days: 4, startOffsetDays: 1 },
-        { label: '5 Working Days Pre-Order', days: 5, startOffsetDays: 1 },
-        { label: '6 Working Days Pre-Order', days: 6, startOffsetDays: 1 },
-        { label: '7 Working Days Pre-Order', days: 7, startOffsetDays: 1 },
-        { label: '8 Working Days Pre-Order', days: 8, startOffsetDays: 1 },
-        { label: '9 Working Days Pre-Order', days: 9, startOffsetDays: 1 },
-        { label: '10 Working Days Pre-Order', days: 10, startOffsetDays: 1 },
-        { label: '30 Working Days Pre-Order', days: 30, startOffsetDays: 1 }
+        { label: '1 Working Day (After 12 PM - Normal)', days: 1, startOffsetDays: 1 }
     ];
 
-    // --- macro template ---
+    // Loop to add 3 to 30 days
+    for (let i = 3; i <= 30; i++) {
+        blocks.push({
+            label: `${i} Working Days Pre-Order`,
+            days: i,
+            startOffsetDays: 1
+        });
+    }
+
     function macroText(snPlaceholder, workingDays, estDate) {
       const estText = `${formatDateLong(estDate)} at 23.59`;
       return `For now, your order with SN (${snPlaceholder}) is will be packed. It takes ${workingDays} working days. Not include Saturday, Sunday and Public Holiday if any. Maximum your package will ship on ${estText}. But don't worry, it can be faster than the estimation.`;
     }
 
-    // --- main calculate function ---
     function calculate() {
       const input = document.getElementById('orderDate').value;
       const resultsDiv = document.getElementById('results');
@@ -267,20 +250,17 @@
         }
         
         let firstWorkingDay = normalizeToWorkingDay(start);
-
-        // --- FIX 2: Sederhanakan logika kalkulasi estDate ---
-        // Logika sebelumnya dengan if/else bisa diganti dengan satu baris.
-        // Hari pengemasan dihitung sebagai (hari kerja pertama) + (total hari - 1) hari kerja berikutnya.
-        // Jika blk.days adalah 1, maka akan ditambah 0 hari kerja, yang hasilnya adalah hari itu sendiri.
         let estDate = addWorkingDays(firstWorkingDay, blk.days - 1);
-
         let remaining = countWorkingDaysBetween(todayNorm, estDate);
         if (remaining < 0) remaining = 0;
 
         const macro = macroText('', blk.days, estDate);
 
+        // Safe ID for elements
+        const safeId = blk.label.replace(/[^a-z0-9]/gi, '-');
+
         output += `
-          <div class="country" id="blk-${blk.label.replace(/\s+/g,'-')}">
+          <div class="country" id="blk-${safeId}">
             <h3>${blk.label}</h3>
             <div class="result">
               <div class="highlight">Estimated Packaging Complete:</div>
@@ -288,10 +268,10 @@
               Remaining Working Days: <strong>${remaining}</strong>
 
               <div class="macro-container">
-                <div class="macro-box" id="macro-${blk.label.replace(/\s+/g,'-')}">
+                <div class="macro-box" id="macro-${safeId}">
                   <div class="macro-header">
                     <div class="macro-title">Packaging Macro</div>
-                    <button class="copy-btn" data-id="macro-${blk.label.replace(/\s+/g,'-')}" onclick="copyToClipboard('macro-${blk.label.replace(/\s+/g,'-')}')">Copy</button>
+                    <button class="copy-btn" data-id="macro-${safeId}" onclick="copyToClipboard('macro-${safeId}')">Copy</button>
                   </div>
                   <div class="macro-text">${macro}</div>
                 </div>
@@ -302,7 +282,6 @@
       resultsDiv.innerHTML = output;
     }
 
-    // --- copy to clipboard helper ---
     function copyToClipboard(boxId) {
       const box = document.getElementById(boxId);
       if (!box) return;
@@ -320,7 +299,6 @@
       });
     }
 
-    // --- prefill today's date ---
     (function prefillToday(){
       const el = document.getElementById('orderDate');
       if (el) {
